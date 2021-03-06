@@ -114,91 +114,69 @@ vector<tuple<int, int, int, int> > solve(int n, const vector<int>& x, const vect
         }
 
         // pick a neighbor
-        int neighbor = uniform_int_distribution<int>(0, n * 8 - 1)(gen);
-        int i = neighbor / 8;
-        int dir = neighbor % 8 / 2;
-        bool sign = neighbor % 2;
+        int i = uniform_int_distribution<int>(0, n - 1)(gen);
+        int dir = uniform_int_distribution<int>(0, 4 - 1)(gen);
+        int amount_min = -100;
+        int amount_max = 100;
+        if (dir == LEFT) {
+            amount_max = min(amount_max, a[i]);
+            amount_min = max(amount_min, - (x[i] - a[i]));
+        } else if (dir == UP) {
+            amount_max = min(amount_max, b[i]);
+            amount_min = max(amount_min, - (y[i] - b[i]));
+        } else if (dir == RIGHT) {
+            amount_max = min(amount_max, W - c[i]);
+            amount_min = max(amount_min, - (c[i] - x[i]) + 1);
+        } else if (dir == DOWN) {
+            amount_max = min(amount_max, H - d[i]);
+            amount_min = max(amount_min, - (d[i] - y[i]) + 1);
+        } else {
+            assert (false);
+        }
+        assert (amount_min <= amount_max);
+        if (amount_min == 0 and amount_max == 0) {
+            continue;
+        }
+        int amount = 0;
+        while (amount == 0) {
+            amount = uniform_int_distribution<int>(amount_min, amount_max)(gen);
+        }
 
         // check
-        if (sign) {
+        if (amount > 0) {
+            int ly = b[i];
+            int ry = d[i];
+            int lx = a[i];
+            int rx = c[i];
             if (dir == LEFT) {
-                if (a[i] == 0) {
-                    continue;
-                }
-                bool found = false;
-                REP3 (y, b[i], d[i]) {
-                    if (f[a[i] - 1][y] != -1) {
-                        found = true;
-                        break;
-                    }
-                }
-                if (found) {
-                    continue;
-                }
+                lx = a[i] - amount;
+                rx = a[i];
             } else if (dir == UP) {
-                if (b[i] == 0) {
-                    continue;
-                }
-                bool found = false;
-                REP3 (x, a[i], c[i]) {
-                    if (f[x][b[i] - 1] != -1) {
-                        found = true;
-                        break;
-                    }
-                }
-                if (found) {
-                    continue;
-                }
+                ly = b[i] - amount;
+                ry = b[i];
             } else if (dir == RIGHT) {
-                if (c[i] == W) {
-                    continue;
-                }
-                bool found = false;
-                REP3 (y, b[i], d[i]) {
-                    if (f[c[i] + 1][y] != -1) {
-                        found = true;
-                        break;
-                    }
-                }
-                if (found) {
-                    continue;
-                }
+                lx = c[i];
+                rx = c[i] + amount;
             } else if (dir == DOWN) {
-                if (d[i] == H) {
-                    continue;
-                }
-                bool found = false;
-                REP3 (x, a[i], c[i]) {
-                    if (f[x][d[i] + 1] != -1) {
-                        found = true;
-                        break;
-                    }
-                }
-                if (found) {
-                    continue;
-                }
+                ly = d[i];
+                ry = d[i] + amount;
             } else {
                 assert (false);
             }
-        } else {
-            if (dir == LEFT) {
-                if (a[i] == x[i]) {
-                    continue;
+            bool found = false;
+            REP3 (y, ly, ry) {
+                REP3 (x, lx, rx) {
+                    if (f[y][x] != -1) {
+                        found = true;
+                        break;
+                    }
                 }
-            } else if (dir == UP) {
-                if (b[i] == y[i]) {
-                    continue;
+                if (found) {
+                    break;
                 }
-            } else if (dir == RIGHT) {
-                if (c[i] == x[i] + 1) {
-                    continue;
-                }
-            } else if (dir == DOWN) {
-                if (d[i] == y[i] + 1) {
-                    continue;
-                }
-            } else {
-                assert (false);
+            }
+            if (found) {
+                continue;
             }
         }
 
@@ -206,17 +184,28 @@ vector<tuple<int, int, int, int> > solve(int n, const vector<int>& x, const vect
         long double delta = 0;
         delta -= get_pre_score(i);
         if (dir == LEFT) {
-            a[i] -= sign ? +1 : -1;
+            a[i] -= amount;
         } else if (dir == UP) {
-            b[i] -= sign ? +1 : -1;
+            b[i] -= amount;
         } else if (dir == RIGHT) {
-            c[i] += sign ? +1 : -1;
+            c[i] += amount;
         } else if (dir == DOWN) {
-            d[i] += sign ? +1 : -1;
+            d[i] += amount;
         } else {
             assert (false);
         }
         delta += get_pre_score(i);
+        if (dir == LEFT) {
+            a[i] += amount;
+        } else if (dir == UP) {
+            b[i] += amount;
+        } else if (dir == RIGHT) {
+            c[i] -= amount;
+        } else if (dir == DOWN) {
+            d[i] -= amount;
+        } else {
+            assert (false);
+        }
 
         auto probability = [&]() {
             constexpr double boltzmann = 3;
@@ -232,57 +221,74 @@ vector<tuple<int, int, int, int> > solve(int n, const vector<int>& x, const vect
                 ans = pack_state(n, a, b, c, d);
             }
 
+            if (amount > 0) {
+                int ly = b[i];
+                int ry = d[i];
+                int lx = a[i];
+                int rx = c[i];
+                if (dir == LEFT) {
+                    lx = a[i] - amount;
+                    rx = a[i];
+                } else if (dir == UP) {
+                    ly = b[i] - amount;
+                    ry = b[i];
+                } else if (dir == RIGHT) {
+                    lx = c[i];
+                    rx = c[i] + amount;
+                } else if (dir == DOWN) {
+                    ly = d[i];
+                    ry = d[i] + amount;
+                } else {
+                    assert (false);
+                }
+                REP3 (y, ly, ry) {
+                    REP3 (x, lx, rx) {
+                        f[y][x] = i;
+                    }
+                }
+            } else {
+                int ly = b[i];
+                int ry = d[i];
+                int lx = a[i];
+                int rx = c[i];
+                if (dir == LEFT) {
+                    lx = a[i];
+                    rx = a[i] - amount;
+                } else if (dir == UP) {
+                    ly = b[i];
+                    ry = b[i] - amount;
+                } else if (dir == RIGHT) {
+                    lx = c[i] + amount;
+                    rx = c[i];
+                } else if (dir == DOWN) {
+                    ly = d[i] + amount;
+                    ry = d[i];
+                } else {
+                    assert (false);
+                }
+                REP3 (y, ly, ry) {
+                    REP3 (x, lx, rx) {
+                        f[y][x] = -1;
+                    }
+                }
+            }
+
             if (dir == LEFT) {
-                REP3 (y, b[i], d[i]) {
-                    if (sign) {
-                        f[a[i]][y] = i;
-                    } else {
-                        f[a[i] - 1][y] = -1;
-                    }
-                }
+                a[i] -= amount;
             } else if (dir == UP) {
-                REP3 (x, a[i], c[i]) {
-                    if (sign) {
-                        f[x][b[i]] = i;
-                    } else {
-                        f[x][b[i] - 1] = -1;
-                    }
-                }
+                b[i] -= amount;
             } else if (dir == RIGHT) {
-                REP3 (y, b[i], d[i]) {
-                    if (sign) {
-                        f[c[i] - 1][y] = i;
-                    } else {
-                        f[c[i]][y] = -1;
-                    }
-                }
+                c[i] += amount;
             } else if (dir == DOWN) {
-                REP3 (x, a[i], c[i]) {
-                    if (sign) {
-                        f[x][d[i] - 1] = i;
-                    } else {
-                        f[x][d[i]] = -1;
-                    }
-                }
+                d[i] += amount;
             } else {
                 assert (false);
             }
 
         } else {
             // reject
-            if (dir == LEFT) {
-                a[i] += sign ? +1 : -1;
-            } else if (dir == UP) {
-                b[i] += sign ? +1 : -1;
-            } else if (dir == RIGHT) {
-                c[i] -= sign ? +1 : -1;
-            } else if (dir == DOWN) {
-                d[i] -= sign ? +1 : -1;
-            } else {
-                assert (false);
-            }
         }
-        // assert (static_cast<int>(1e9 * pre_score / n) == compute_score(n, x, y, r, a, b, c, d));
+        assert (static_cast<int>(1e9 * pre_score / n) == compute_score(n, x, y, r, a, b, c, d));
     }
     return ans;
 }
