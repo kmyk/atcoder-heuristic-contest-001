@@ -63,7 +63,7 @@ def main() -> 'NoReturn':
     for i, seed in enumerate(seeds):
         input_path = pathlib.Path('in', '%04d.txt' % i)
         output_path = pathlib.Path('out', '%04d.txt' % i)
-        vis_path = pathlib.Path('vis', '%04d.txt' % i)
+        vis_path = pathlib.Path('vis', '%04d.svg' % i)
         score = vis(input_path=input_path, output_path=output_path, vis_path=vis_path, seed=seed)
         scores.append(score)
         logger.info('seed = {}: score = {}'.format(seed, score))
