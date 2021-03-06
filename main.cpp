@@ -173,6 +173,7 @@ vector<tuple<int, int, int, int> > solve(int n, const vector<int>& x, const vect
                 REP3 (x, lx, rx) {
                     if (f[y][x] != static_cast<uint8_t>(-1)) {
                         overlap.insert(f[y][x]);
+                        x = c[f[y][x]] - 1;
                     }
                 }
             }
