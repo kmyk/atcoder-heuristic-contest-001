@@ -91,7 +91,7 @@ vector<tuple<int, int, int, int> > solve(int n, const vector<int>& x, const vect
         pre_score += get_pre_score(i);
     }
 
-    vector<array<char, W> > f(H);
+    vector<array<uint8_t, W> > f(H);
     REP (y, H) {
         REP (x, W) {
             f[y][x] = -1;
@@ -146,6 +146,7 @@ vector<tuple<int, int, int, int> > solve(int n, const vector<int>& x, const vect
         }
 
         // check
+        set<int> overlap;
         if (amount > 0) {
             int ly = b[i];
             int ry = d[i];
@@ -166,19 +167,42 @@ vector<tuple<int, int, int, int> > solve(int n, const vector<int>& x, const vect
             } else {
                 assert (false);
             }
-            bool found = false;
+            assert (0 <= ly and ly < ry and ry <= H);
+            assert (0 <= lx and lx < rx and rx <= W);
             REP3 (y, ly, ry) {
                 REP3 (x, lx, rx) {
-                    if (f[y][x] != -1) {
-                        found = true;
-                        break;
+                    if (f[y][x] != static_cast<uint8_t>(-1)) {
+                        overlap.insert(f[y][x]);
                     }
                 }
-                if (found) {
+            }
+        }
+        if (not overlap.empty()) {
+            int ly = b[i];
+            int ry = d[i];
+            int lx = a[i];
+            int rx = c[i];
+            assert (amount > 0);
+            if (dir == LEFT) {
+                lx = a[i] - amount;
+            } else if (dir == UP) {
+                ly = b[i] - amount;
+            } else if (dir == RIGHT) {
+                rx = c[i] + amount;
+            } else if (dir == DOWN) {
+                ry = d[i] + amount;
+            } else {
+                assert (false);
+            }
+            bool impossible = false;
+            for (int j : overlap) {
+                assert (0 <= j and j < n);
+                if (ly <= y[j] and y[j] < ry and lx <= x[j] and x[j] < rx) {
+                    impossible = true;
                     break;
                 }
             }
-            if (found) {
+            if (impossible) {
                 continue;
             }
         }
@@ -209,6 +233,71 @@ vector<tuple<int, int, int, int> > solve(int n, const vector<int>& x, const vect
         } else {
             assert (false);
         }
+        map<int, tuple<int, int, int, int> > preserved_overlap;
+        for (int j : overlap) {
+            assert (j != i);
+            delta -= get_pre_score(j);
+            preserved_overlap[j] = make_tuple(a[j], b[j], c[j], d[j]);
+            assert (amount > 0);
+            if (dir == LEFT) {
+                if (x[j] < a[i] - amount) {
+                    c[j] = a[i] - amount;
+                } else if (y[j] < b[i]) {
+                    d[j] = b[i];
+                } else if (c[i] <= x[j]) {
+                    a[j] = c[i];
+                } else if (d[i] <= y[j]) {
+                    b[j] = d[i];
+                } else {
+                    assert (false);
+                }
+                assert (min(c[i], c[j]) <= max(a[i] - amount, a[j]) or min(d[i], d[j]) <= max(b[i], b[j]));
+            } else if (dir == UP) {
+                if (x[j] < a[i]) {
+                    c[j] = a[i];
+                } else if (y[j] < b[i] - amount) {
+                    d[j] = b[i] - amount;
+                } else if (c[i] <= x[j]) {
+                    a[j] = c[i];
+                } else if (d[i] <= y[j]) {
+                    b[j] = d[i];
+                } else {
+                    assert (false);
+                }
+                assert (min(c[i], c[j]) <= max(a[i], a[j]) or min(d[i], d[j]) <= max(b[i] - amount, b[j]));
+            } else if (dir == RIGHT) {
+                if (x[j] < a[i]) {
+                    c[j] = a[i];
+                } else if (y[j] < b[i]) {
+                    d[j] = b[i];
+                } else if (c[i] + amount <= x[j]) {
+                    a[j] = c[i] + amount;
+                } else if (d[i] <= y[j]) {
+                    b[j] = d[i];
+                } else {
+                    assert (false);
+                }
+                assert (min(c[i] + amount, c[j]) <= max(a[i], a[j]) or min(d[i], d[j]) <= max(b[i], b[j]));
+            } else if (dir == DOWN) {
+                if (x[j] < a[i]) {
+                    c[j] = a[i];
+                } else if (y[j] < b[i]) {
+                    d[j] = b[i];
+                } else if (c[i] <= x[j]) {
+                    a[j] = c[i];
+                } else if (d[i] + amount <= y[j]) {
+                    b[j] = d[i] + amount;
+                } else {
+                    assert (false);
+                }
+                assert (min(c[i], c[j]) <= max(a[i], a[j]) or min(d[i] + amount, d[j]) <= max(b[i], b[j]));
+            } else {
+                assert (false);
+            }
+            assert (0 <= a[j] and a[j] <= x[j] and x[j] < c[j] and c[j] <= W);
+            assert (0 <= b[j] and b[j] <= y[j] and y[j] < d[j] and d[j] <= H);
+            delta += get_pre_score(j);
+        }
 
         auto probability = [&]() {
             constexpr long double boltzmann = 100;
@@ -225,6 +314,34 @@ vector<tuple<int, int, int, int> > solve(int n, const vector<int>& x, const vect
                 fprintf(stderr, "highscore = %d  (iteration = %d)\n", static_cast<int>(1e9 * pre_highscore / n), iteration);
                 pre_highscore = pre_score;
                 ans = pack_state(n, a, b, c, d);
+            }
+
+            for (auto [j, preserved] : preserved_overlap) {
+                auto [a_j, b_j, c_j, d_j] = preserved;
+                for (; a_j < a[j]; ++ a_j) {
+                    REP3 (y, b_j, d_j) {
+                        f[y][a_j] = -1;
+                    }
+                }
+                for (; b_j < b[j]; ++ b_j) {
+                    REP3 (x, a_j, c_j) {
+                        f[b_j][x] = -1;
+                    }
+                }
+                for (; c[j] < c_j; -- c_j) {
+                    REP3 (y, b_j, d_j) {
+                        f[y][c_j - 1] = -1;
+                    }
+                }
+                for (; d[j] < d_j; -- d_j) {
+                    REP3 (x, a_j, c_j) {
+                        f[d_j - 1][x] = -1;
+                    }
+                }
+                assert (a_j == a[j]);
+                assert (b_j == b[j]);
+                assert (c_j == c[j]);
+                assert (d_j == d[j]);
             }
 
             if (amount > 0) {
@@ -250,6 +367,7 @@ vector<tuple<int, int, int, int> > solve(int n, const vector<int>& x, const vect
                 REP3 (y, ly, ry) {
                     REP3 (x, lx, rx) {
                         f[y][x] = i;
+                        assert (0 <= f[y][x] and f[y][x] < n);
                     }
                 }
             } else {
@@ -293,9 +411,14 @@ vector<tuple<int, int, int, int> > solve(int n, const vector<int>& x, const vect
 
         } else {
             // reject
+            for (auto [j, preserved] : preserved_overlap) {
+                tie(a[j], b[j], c[j], d[j]) = preserved;
+            }
         }
         // assert (static_cast<int>(1e9 * pre_score / n) == compute_score(n, x, y, r, a, b, c, d));
         // REP (j, n) {
+        //     assert (0 <= a[j] and a[j] <= x[j] and x[j] < c[j] and c[j] <= W);
+        //     assert (0 <= b[j] and b[j] <= y[j] and y[j] < d[j] and d[j] <= H);
         //     if (j != i) {
         //         assert (min(c[i], c[j]) <= max(a[i], a[j]) or min(d[i], d[j]) <= max(b[i], b[j]));
         //     }

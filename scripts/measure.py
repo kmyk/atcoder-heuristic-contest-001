@@ -31,7 +31,11 @@ def run(*, command: str, input_path: pathlib.Path, output_path: pathlib.Path, se
 
 def vis(*, input_path: pathlib.Path, output_path: pathlib.Path, vis_path: pathlib.Path, seed: int) -> int:
     logger.info('running the visualizer for seed %d...', seed)
-    score_str = subprocess.check_output(['cargo', 'run', '--manifest-path', str(pathlib.Path('tools', 'Cargo.toml')), '--bin', 'vis', '--', str(input_path), str(output_path)])
+    try:
+        score_str = subprocess.check_output(['cargo', 'run', '--manifest-path', str(pathlib.Path('tools', 'Cargo.toml')), '--bin', 'vis', '--', str(input_path), str(output_path)])
+    except subprocess.SubprocessError:
+        logger.exception('failed for seed = %d', seed)
+        return 0
     os.rename('out.svg', vis_path)
     return int(score_str)
 
