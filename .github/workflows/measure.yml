@@ -6,6 +6,10 @@ jobs:
   measure:
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        seed: [0, 100, 200, 300, 400, 500, 600, 700, 800, 900]
+
     steps:
     - uses: actions/checkout@v2
 
@@ -28,4 +32,4 @@ jobs:
 
     - name: Measure the score
       run: |
-        python3 scripts/measure.py
+        python3 scripts/measure.py --count 100 --seed ${{ matrix.seed }}
