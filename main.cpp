@@ -97,6 +97,9 @@ vector<tuple<int, int, int, int> > solve(int n, const vector<int>& x, const vect
             f[y][x] = -1;
         }
     }
+    REP (i, n) {
+        f[y[i]][x[i]] = i;
+    }
 
     vector<tuple<int, int, int, int> > ans = pack_state(n, a, b, c, d);
     long double pre_highscore = pre_score;
@@ -289,6 +292,11 @@ vector<tuple<int, int, int, int> > solve(int n, const vector<int>& x, const vect
             // reject
         }
         assert (static_cast<int>(1e9 * pre_score / n) == compute_score(n, x, y, r, a, b, c, d));
+        REP (j, n) {
+            if (j != i) {
+                assert (min(c[i], c[j]) <= max(a[i], a[j]) or min(d[i], d[j]) <= max(b[i], b[j]));
+            }
+        }
     }
     return ans;
 }
