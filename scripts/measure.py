@@ -41,12 +41,13 @@ def main() -> 'NoReturn':
     parser.add_argument('-c', '--command', default='./a.out')
     parser.add_argument('-n', '--count', type=int, default=50)
     parser.add_argument('-j', '--jobs', type=int, default=2)
+    parser.add_argument('--seed', type=int, default=0)
     args = parser.parse_args()
 
     basicConfig(level=DEBUG)
 
     # gen
-    seeds = list(range(args.count))
+    seeds = [args.seed + i for i in range(args.count)]
     gen(seeds=seeds)
 
     # run
