@@ -91,7 +91,7 @@ vector<tuple<int, int, int, int> > solve(int n, const vector<int>& x, const vect
         pre_score += get_pre_score(i);
     }
 
-    vector<array<char, W> > f(H);
+    vector<array<uint8_t, W> > f(H);
     REP (y, H) {
         REP (x, W) {
             f[y][x] = -1;
@@ -167,9 +167,11 @@ vector<tuple<int, int, int, int> > solve(int n, const vector<int>& x, const vect
             } else {
                 assert (false);
             }
+            assert (0 <= ly and ly < ry and ry <= H);
+            assert (0 <= lx and lx < rx and rx <= W);
             REP3 (y, ly, ry) {
                 REP3 (x, lx, rx) {
-                    if (f[y][x] != -1) {
+                    if (f[y][x] != static_cast<uint8_t>(-1)) {
                         overlap.insert(f[y][x]);
                     }
                 }
@@ -194,6 +196,7 @@ vector<tuple<int, int, int, int> > solve(int n, const vector<int>& x, const vect
             }
             bool impossible = false;
             for (int j : overlap) {
+                assert (0 <= j and j < n);
                 if (ly <= y[j] and y[j] < ry and lx <= x[j] and x[j] < rx) {
                     impossible = true;
                     break;
@@ -232,6 +235,7 @@ vector<tuple<int, int, int, int> > solve(int n, const vector<int>& x, const vect
         }
         map<int, tuple<int, int, int, int> > preserved_overlap;
         for (int j : overlap) {
+            assert (j != i);
             delta -= get_pre_score(j);
             preserved_overlap[j] = make_tuple(a[j], b[j], c[j], d[j]);
             assert (amount > 0);
@@ -247,6 +251,7 @@ vector<tuple<int, int, int, int> > solve(int n, const vector<int>& x, const vect
                 } else {
                     assert (false);
                 }
+                assert (min(c[i], c[j]) <= max(a[i] - amount, a[j]) or min(d[i], d[j]) <= max(b[i], b[j]));
             } else if (dir == UP) {
                 if (x[j] < a[i]) {
                     c[j] = a[i];
@@ -259,6 +264,7 @@ vector<tuple<int, int, int, int> > solve(int n, const vector<int>& x, const vect
                 } else {
                     assert (false);
                 }
+                assert (min(c[i], c[j]) <= max(a[i], a[j]) or min(d[i], d[j]) <= max(b[i] - amount, b[j]));
             } else if (dir == RIGHT) {
                 if (x[j] < a[i]) {
                     c[j] = a[i];
@@ -271,6 +277,7 @@ vector<tuple<int, int, int, int> > solve(int n, const vector<int>& x, const vect
                 } else {
                     assert (false);
                 }
+                assert (min(c[i] + amount, c[j]) <= max(a[i], a[j]) or min(d[i], d[j]) <= max(b[i], b[j]));
             } else if (dir == DOWN) {
                 if (x[j] < a[i]) {
                     c[j] = a[i];
@@ -283,11 +290,12 @@ vector<tuple<int, int, int, int> > solve(int n, const vector<int>& x, const vect
                 } else {
                     assert (false);
                 }
+                assert (min(c[i], c[j]) <= max(a[i], a[j]) or min(d[i] + amount, d[j]) <= max(b[i], b[j]));
             } else {
                 assert (false);
             }
-            assert (a[j] <= x[j]); assert (x[j] < c[j]);
-            assert (b[j] <= y[j]); assert (y[j] < d[j]);
+            assert (0 <= a[j] and a[j] <= x[j] and x[j] < c[j] and c[j] <= W);
+            assert (0 <= b[j] and b[j] <= y[j] and y[j] < d[j] and d[j] <= H);
             delta += get_pre_score(j);
         }
 
@@ -359,6 +367,7 @@ vector<tuple<int, int, int, int> > solve(int n, const vector<int>& x, const vect
                 REP3 (y, ly, ry) {
                     REP3 (x, lx, rx) {
                         f[y][x] = i;
+                        assert (0 <= f[y][x] and f[y][x] < n);
                     }
                 }
             } else {
