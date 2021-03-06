@@ -291,12 +291,12 @@ vector<tuple<int, int, int, int> > solve(int n, const vector<int>& x, const vect
         } else {
             // reject
         }
-        assert (static_cast<int>(1e9 * pre_score / n) == compute_score(n, x, y, r, a, b, c, d));
-        REP (j, n) {
-            if (j != i) {
-                assert (min(c[i], c[j]) <= max(a[i], a[j]) or min(d[i], d[j]) <= max(b[i], b[j]));
-            }
-        }
+        // assert (static_cast<int>(1e9 * pre_score / n) == compute_score(n, x, y, r, a, b, c, d));
+        // REP (j, n) {
+        //     if (j != i) {
+        //         assert (min(c[i], c[j]) <= max(a[i], a[j]) or min(d[i], d[j]) <= max(b[i], b[j]));
+        //     }
+        // }
     }
     return ans;
 }
