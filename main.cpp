@@ -307,7 +307,7 @@ vector<tuple<int, int, int, int> > solve(int n, const vector<int>& x, const vect
         if (delta >= 0.0 or bernoulli_distribution(probability())(gen)) {
 
             // accept
-            if (delta < 1e-9) {
+            if (delta < -1e-9) {
                 fprintf(stderr, "decreasing move  (delta = %Lf, iteration = %d)\n", delta, iteration);
             }
             pre_score += delta;
