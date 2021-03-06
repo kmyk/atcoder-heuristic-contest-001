@@ -120,7 +120,7 @@ vector<tuple<int, int, int, int> > solve(int n, const vector<int>& x, const vect
         int i = uniform_int_distribution<int>(0, n - 1)(gen);
         int dir = uniform_int_distribution<int>(0, 4 - 1)(gen);
         int amount_min = -100;
-        int amount_max = 100;
+        int amount_max = 300;
         if (dir == LEFT) {
             amount_max = min(amount_max, a[i]);
             amount_min = max(amount_min, - (x[i] - a[i]));
