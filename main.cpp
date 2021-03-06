@@ -146,6 +146,7 @@ vector<tuple<int, int, int, int> > solve(int n, const vector<int>& x, const vect
         }
 
         // check
+        set<int> overlap;
         if (amount > 0) {
             int ly = b[i];
             int ry = d[i];
@@ -166,19 +167,38 @@ vector<tuple<int, int, int, int> > solve(int n, const vector<int>& x, const vect
             } else {
                 assert (false);
             }
-            bool found = false;
             REP3 (y, ly, ry) {
                 REP3 (x, lx, rx) {
                     if (f[y][x] != -1) {
-                        found = true;
-                        break;
+                        overlap.insert(f[y][x]);
                     }
                 }
-                if (found) {
+            }
+        }
+        if (not overlap.empty()) {
+            int ly = b[i];
+            int ry = d[i];
+            int lx = a[i];
+            int rx = c[i];
+            if (dir == LEFT) {
+                lx = a[i] - amount;
+            } else if (dir == UP) {
+                ly = b[i] - amount;
+            } else if (dir == RIGHT) {
+                rx = c[i] + amount;
+            } else if (dir == DOWN) {
+                ry = d[i] + amount;
+            } else {
+                assert (false);
+            }
+            bool impossible = false;
+            for (int j : overlap) {
+                if (ly <= y[j] and y[j] < ry and lx <= x[j] and x[j] < rx) {
+                    impossible = true;
                     break;
                 }
             }
-            if (found) {
+            if (impossible) {
                 continue;
             }
         }
@@ -208,6 +228,16 @@ vector<tuple<int, int, int, int> > solve(int n, const vector<int>& x, const vect
             d[i] -= amount;
         } else {
             assert (false);
+        }
+        map<int, tuple<int, int, int, int> > preserved_overlap;
+        for (int j : overlap) {
+            delta -= get_pre_score(j);
+            preserved_overlap[j] = make_tuple(a[j], b[j], c[j], d[j]);
+            a[j] = x[j];
+            b[j] = y[j];
+            c[j] = x[j] + 1;
+            d[j] = y[j] + 1;
+            delta += get_pre_score(j);
         }
 
         auto probability = [&]() {
@@ -293,6 +323,9 @@ vector<tuple<int, int, int, int> > solve(int n, const vector<int>& x, const vect
 
         } else {
             // reject
+            for (auto [j, preserved] : preserved_overlap) {
+                tie(a[j], b[j], c[j], d[j]) = preserved;
+            }
         }
         // assert (static_cast<int>(1e9 * pre_score / n) == compute_score(n, x, y, r, a, b, c, d));
         // REP (j, n) {
