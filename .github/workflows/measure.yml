@@ -32,4 +32,4 @@ jobs:
 
     - name: Measure the score
       run: |
-        python3 scripts/measure.py --count 100 --seed ${{ matrix.seed }}
+        python3 scripts/measure.py --jobs 2 --count 100 --seed ${{ matrix.seed }}
