@@ -211,15 +211,18 @@ vector<tuple<int, int, int, int> > solve(int n, const vector<int>& x, const vect
         }
 
         auto probability = [&]() {
-            constexpr double boltzmann = 3;
+            constexpr long double boltzmann = 100;
             return exp(boltzmann * delta) * temperature;
         };
         if (delta >= 0.0 or bernoulli_distribution(probability())(gen)) {
 
             // accept
+            if (delta < 1e-9) {
+                fprintf(stderr, "decreasing move  (delta = %Lf, iteration = %d)\n", delta, iteration);
+            }
             pre_score += delta;
             if (pre_highscore < pre_score) {
-                // fprintf(stderr, "highscore = %d  (iteration = %d)\n", static_cast<int>(1e9 * pre_highscore / n), iteration);
+                fprintf(stderr, "highscore = %d  (iteration = %d)\n", static_cast<int>(1e9 * pre_highscore / n), iteration);
                 pre_highscore = pre_score;
                 ans = pack_state(n, a, b, c, d);
             }
