@@ -1,6 +1,6 @@
 #include <bits/stdc++.h>
-#ifdef VISUALIZE_POYO
-#include "poyo.cpp"
+#ifdef VISUALIZE
+#include "vis.hpp"
 #endif
 #define REP(i, n) for (int i = 0; (i) < (int)(n); ++ (i))
 #define REP3(i, m, n) for (int i = (m); (i) < (int)(n); ++ (i))
@@ -65,6 +65,15 @@ int compute_score(int n, const vector<int>& x, const vector<int>& y, const vecto
     return 1e9 * score / n;
 }
 
+#ifdef VISUALIZE
+struct sidebar_info {
+    int iteration;
+    double temperature;
+    int score;
+    int highscore;
+};
+#endif
+
 template <typename RandomEngine>
 vector<tuple<int, int, int, int> > solve(int n, const vector<int>& x, const vector<int>& y, const vector<int>& r, RandomEngine& gen, chrono::high_resolution_clock::time_point clock_end) {
     chrono::high_resolution_clock::time_point clock_begin = chrono::high_resolution_clock::now();
@@ -107,47 +116,51 @@ vector<tuple<int, int, int, int> > solve(int n, const vector<int>& x, const vect
     vector<tuple<int, int, int, int> > ans = pack_state(n, a, b, c, d);
     long double pre_highscore = pre_score;
 
-#ifdef VISUALIZE_POYO
-    Graphics g;
-    Movie mov;
-    const int SCREEN = 1000;
-    const double SCALE = SCREEN / (double)H;
-    g.screen(SCREEN, SCREEN);
+    // simulated annealing
+    double temperature = 1.0;
+    int iteration = 0;
+
+#ifdef VISUALIZE
+    deque<visualizer::image> movie;
+    deque<sidebar_info> sidebar;
+    const int SCREEN_SIZE = 1000;
+    const int SIDEBAR_WIDTH = 200;
+    const double SCALE = SCREEN_SIZE / (double)H;
     auto render = [&]() {
-        g.clear();
-        g.stroke(0, 0, 0);
-        g.fill(1, 1, 1);
-        g.rect(1, 1, SCREEN - 2, SCREEN - 2);
+        visualizer::image g(SCREEN_SIZE, SCREEN_SIZE + SIDEBAR_WIDTH);
+        g.add_rect(1, 1, SCREEN_SIZE - 2, SCREEN_SIZE - 2, visualizer::BLACK);
         REP (i, n) {
             double p = get_pre_score(i);
-            g.stroke(1.0 - p, 0.2, p * 0.8);
-            g.fill(1.0 - p, 0.2, p * 0.8, 1.0 - p);
-            g.rect(a[i] * SCALE, b[i] * SCALE, (c[i] - a[i]) * SCALE, (d[i] - b[i]) * SCALE);
-            g.line((a[i] + c[i]) / 2.0 * SCALE, (b[i] + d[i]) / 2.0 * SCALE, x[i] * SCALE, y[i] * SCALE);
-            g.fill(0, 0, 0);
+            visualizer::color stroke { 1.0 - p, 0.2, p * 0.8, 1.0 };
+            visualizer::color fill { 1.0 - p, 0.2, p * 0.8, 1.0 - p };
+            g.add_rect(a[i] * SCALE, b[i] * SCALE, (c[i] - a[i]) * SCALE, (d[i] - b[i]) * SCALE, stroke, fill);
+            g.add_line((a[i] + c[i]) / 2.0 * SCALE, (b[i] + d[i]) / 2.0 * SCALE, x[i] * SCALE, y[i] * SCALE, stroke);
             char buf[64];
             sprintf(buf, "%.3f", p);
-            g.text(string(buf), (a[i] + c[i]) / 2.0 * SCALE, (b[i] + d[i]) / 2.0 * SCALE, 12);
+            g.add_text((a[i] + c[i]) / 2.0 * SCALE, (b[i] + d[i]) / 2.0 * SCALE, string(buf), visualizer::BLACK, 12, "middle");
         }
-        mov.addFrame(g);
+        movie.push_back(move(g));
+
+        sidebar_info info;
+        info.iteration = iteration;
+        info.temperature = temperature;
+        info.score = 1e9 * pre_score / n;
+        info.highscore = 1e9 * pre_highscore / n;
+        sidebar.push_back(info);
     };
 #else
     auto render = []() {
     };
 #endif
 
-    // simulated annealing
-    double temperature = 1.0;
-    for (int iteration = 0; ; ++ iteration) {
-        if (iteration % 128 == 0) {
+    for (; ; ++ iteration) {
+        if (iteration % 32 == 0) {
             chrono::high_resolution_clock::time_point clock_now = chrono::high_resolution_clock::now();
             temperature = static_cast<long double>((clock_end - clock_now).count()) / (clock_end - clock_begin).count();
             if (temperature <= 0.0) {
                 fprintf(stderr, "done  (iteration = %d)\n", iteration);
                 break;
             }
-        }
-        if (iteration % 1024 == 0) {
             render();
         }
 
@@ -346,12 +359,10 @@ vector<tuple<int, int, int, int> > solve(int n, const vector<int>& x, const vect
                 fprintf(stderr, "decreasing move  (delta = %Lf, iteration = %d)\n", delta, iteration);
             }
             pre_score += delta;
-            bool is_highscore_updated = false;
             if (pre_highscore < pre_score) {
                 fprintf(stderr, "highscore = %d  (iteration = %d)\n", static_cast<int>(1e9 * pre_highscore / n), iteration);
                 pre_highscore = pre_score;
                 ans = pack_state(n, a, b, c, d);
-                is_highscore_updated = true;;
             }
 
             for (auto [j, preserved] : preserved_overlap) {
@@ -447,12 +458,6 @@ vector<tuple<int, int, int, int> > solve(int n, const vector<int>& x, const vect
                 assert (false);
             }
 
-#ifdef VISUALIZE_POYO
-            if (is_highscore_updated) {
-                render();
-            }
-#endif
-
         } else {
             // reject
             for (auto [j, preserved] : preserved_overlap) {
@@ -469,13 +474,71 @@ vector<tuple<int, int, int, int> > solve(int n, const vector<int>& x, const vect
         // }
     }
 
-#ifdef VISUALIZE_POYO
-    std::string html = mov.dumpHtml(60);
-    std::ofstream fout;
-    fout.open("movie.html", std::ios::out);
-    assert (fout);
-    fout << html << endl;
-    fout.close();
+#ifdef VISUALIZE
+    if (movie.size() > 1000) {
+        std::deque<visualizer::image> selected_movie;
+        std::deque<sidebar_info> selected_sidebar;
+        REP (i, movie.size()) {
+            if (bernoulli_distribution(1000.0 / movie.size())(gen)) {
+                selected_movie.push_back(move(movie[i]));
+                selected_sidebar.push_back(sidebar[i]);
+            }
+        }
+        movie.swap(selected_movie);
+        sidebar.swap(selected_sidebar);
+    }
+    int total_iteration = iteration;
+    int highscore = 1e9 * pre_highscore / n;
+    REP (i, movie.size()) {
+        int LINE_HEIGHT = 16;
+        int FONT_SIZE = 16;
+        int PADDING = 12;
+        movie[i].add_text(LINE_HEIGHT, SCREEN_SIZE + PADDING, "iteration: " + to_string(sidebar[i].iteration) + " / " + to_string(total_iteration), visualizer::BLACK, FONT_SIZE);
+        movie[i].add_text(LINE_HEIGHT * 2, SCREEN_SIZE + PADDING, "temperature: " + to_string(sidebar[i].temperature), visualizer::BLACK, FONT_SIZE);
+        movie[i].add_text(LINE_HEIGHT * 3, SCREEN_SIZE + PADDING, "score: " + to_string(sidebar[i].score), visualizer::BLACK, FONT_SIZE);
+        movie[i].add_text(LINE_HEIGHT * 4, SCREEN_SIZE + PADDING, "highscore: " + to_string(sidebar[i].highscore) + " / " + to_string(highscore), visualizer::BLACK, FONT_SIZE);
+
+        int OFFSET_Y = LINE_HEIGHT * 5;
+        auto get_y_from_iteration = [&](int iteration) {
+            return iteration / static_cast<long double>(total_iteration) * (SCREEN_SIZE - OFFSET_Y) + OFFSET_Y;
+        };
+        auto get_x_from_ratio = [&](long double p) {
+            return p * (SIDEBAR_WIDTH - 2 * PADDING) + SCREEN_SIZE + PADDING;
+        };
+        movie[i].add_rect(get_y_from_iteration(0), get_x_from_ratio(0), get_y_from_iteration(total_iteration), get_x_from_ratio(1));
+
+        vector<pair<int, int> > iteration_path;
+        vector<pair<int, int> > score_path;
+        vector<pair<int, int> > highscore_path;
+        int y = get_y_from_iteration(0);
+        int x = get_x_from_ratio(0);
+        iteration_path.emplace_back(y, x);
+        score_path.emplace_back(y, x);
+        highscore_path.emplace_back(y, x);
+        REP (j, i + 1) {
+            int y = get_y_from_iteration(sidebar[j].iteration);
+            int x = get_x_from_ratio(sidebar[j].iteration / static_cast<long double>(total_iteration));
+            iteration_path.emplace_back(y, x);
+            x = get_x_from_ratio(sidebar[j].score / static_cast<long double>(highscore));
+            score_path.emplace_back(y, x);
+            x = get_x_from_ratio(sidebar[j].highscore / static_cast<long double>(highscore));
+            highscore_path.emplace_back(y, x);
+        }
+        iteration_path.erase(unique(ALL(iteration_path)), iteration_path.end());
+        score_path.erase(unique(ALL(score_path)), score_path.end());
+        highscore_path.erase(unique(ALL(highscore_path)), highscore_path.end());
+        movie[i].add_path(iteration_path);
+        movie[i].add_path(score_path, visualizer::RED);
+        movie[i].add_path(highscore_path, visualizer::BLUE);
+        y = get_y_from_iteration(sidebar[i].iteration);
+        x = get_x_from_ratio(sidebar[i].iteration / static_cast<long double>(total_iteration));
+        movie[i].add_text(y, x, "iteration");
+        x = get_x_from_ratio(sidebar[i].score / static_cast<long double>(highscore));
+        movie[i].add_text(y, x, "score", visualizer::RED);
+        x = get_x_from_ratio(sidebar[i].highscore / static_cast<long double>(highscore));
+        movie[i].add_text(y, x, "highscore", visualizer::BLUE);
+    }
+    visualizer::write_movie_to_file("movie.html", movie);
 #endif
     return ans;
 }
