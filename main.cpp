@@ -1,4 +1,7 @@
 #include <bits/stdc++.h>
+#ifdef VISUALIZE_POYO
+#include "poyo.cpp"
+#endif
 #define REP(i, n) for (int i = 0; (i) < (int)(n); ++ (i))
 #define REP3(i, m, n) for (int i = (m); (i) < (int)(n); ++ (i))
 #define REP_R(i, n) for (int i = (int)(n) - 1; (i) >= 0; -- (i))
@@ -104,6 +107,35 @@ vector<tuple<int, int, int, int> > solve(int n, const vector<int>& x, const vect
     vector<tuple<int, int, int, int> > ans = pack_state(n, a, b, c, d);
     long double pre_highscore = pre_score;
 
+#ifdef VISUALIZE_POYO
+    Graphics g;
+    Movie mov;
+    const int SCREEN = 1000;
+    const double SCALE = SCREEN / (double)H;
+    g.screen(SCREEN, SCREEN);
+    auto render = [&]() {
+        g.clear();
+        g.stroke(0, 0, 0);
+        g.fill(1, 1, 1);
+        g.rect(1, 1, SCREEN - 2, SCREEN - 2);
+        REP (i, n) {
+            double p = get_pre_score(i);
+            g.stroke(1.0 - p, 0.2, p * 0.8);
+            g.fill(1.0 - p, 0.2, p * 0.8, 1.0 - p);
+            g.rect(a[i] * SCALE, b[i] * SCALE, (c[i] - a[i]) * SCALE, (d[i] - b[i]) * SCALE);
+            g.line((a[i] + c[i]) / 2.0 * SCALE, (b[i] + d[i]) / 2.0 * SCALE, x[i] * SCALE, y[i] * SCALE);
+            g.fill(0, 0, 0);
+            char buf[64];
+            sprintf(buf, "%.3f", p);
+            g.text(string(buf), (a[i] + c[i]) / 2.0 * SCALE, (b[i] + d[i]) / 2.0 * SCALE, 12);
+        }
+        mov.addFrame(g);
+    };
+#else
+    auto render = []() {
+    };
+#endif
+
     // simulated annealing
     double temperature = 1.0;
     for (int iteration = 0; ; ++ iteration) {
@@ -114,6 +146,9 @@ vector<tuple<int, int, int, int> > solve(int n, const vector<int>& x, const vect
                 fprintf(stderr, "done  (iteration = %d)\n", iteration);
                 break;
             }
+        }
+        if (iteration % 1024 == 0) {
+            render();
         }
 
         // pick a neighbor
@@ -311,10 +346,12 @@ vector<tuple<int, int, int, int> > solve(int n, const vector<int>& x, const vect
                 fprintf(stderr, "decreasing move  (delta = %Lf, iteration = %d)\n", delta, iteration);
             }
             pre_score += delta;
+            bool is_highscore_updated = false;
             if (pre_highscore < pre_score) {
                 fprintf(stderr, "highscore = %d  (iteration = %d)\n", static_cast<int>(1e9 * pre_highscore / n), iteration);
                 pre_highscore = pre_score;
                 ans = pack_state(n, a, b, c, d);
+                is_highscore_updated = true;;
             }
 
             for (auto [j, preserved] : preserved_overlap) {
@@ -410,6 +447,12 @@ vector<tuple<int, int, int, int> > solve(int n, const vector<int>& x, const vect
                 assert (false);
             }
 
+#ifdef VISUALIZE_POYO
+            if (is_highscore_updated) {
+                render();
+            }
+#endif
+
         } else {
             // reject
             for (auto [j, preserved] : preserved_overlap) {
@@ -425,6 +468,15 @@ vector<tuple<int, int, int, int> > solve(int n, const vector<int>& x, const vect
         //     }
         // }
     }
+
+#ifdef VISUALIZE_POYO
+    std::string html = mov.dumpHtml(60);
+    std::ofstream fout;
+    fout.open("movie.html", std::ios::out);
+    assert (fout);
+    fout << html << endl;
+    fout.close();
+#endif
     return ans;
 }
 
